@@ -1,104 +1,360 @@
-# GBG Multi-Region AWS Migration & Disaster Recovery
+# AWS Multi-Region Secure & Resilient Cloud Architecture
 
-Migration of Global Brands Group's on-premises environment to a hub-and-spoke AWS landing zone, with a primary production region and a secondary disaster-recovery (DR) region, using AWS MGN / DMS for cutover and AWS Elastic Disaster Recovery for ongoing replication.
+> **Portfolio Project — Enterprise AWS Infrastructure, Security, Disaster Recovery & Migration**
 
-> Replace the placeholders below (name, regions, repo links) with your project's specifics before publishing.
+## 📌 Overview
 
-## Table of Contents
+This project presents a **multi-region AWS architecture** designed for a secure, highly available, and resilient enterprise workload.
 
-- [Overview](#overview)
-- [Architecture](#architecture)
-  - [Theoretical (Target) Architecture](#theoretical-target-architecture)
-  - [Actual (Implemented) Architecture](#actual-implemented-architecture)
-- [Migration Approach](#migration-approach)
-- [Cost Estimate](#cost-estimate)
-- [Repository Structure](#repository-structure)
-- [Getting Started](#getting-started)
-- [Status](#status)
-- [License](#license)
+The architecture uses **US East (N. Virginia)** as the primary environment and **Europe (Frankfurt)** as a Disaster Recovery (DR) environment. It also includes a dedicated spoke VPC, centralized connectivity, network security controls, monitoring, backup, and migration capabilities.
 
-## Overview
+The design focuses on:
 
-This project stands up a hub-and-spoke AWS network across a primary and a DR region, migrates on-premises web and database workloads into it, and wires up monitoring, security, and backup so the environment is production-ready and resilient to a regional failure.
+- 🔐 Defense-in-depth security
+- 🌍 Multi-region disaster recovery
+- ⚡ High availability and scalable application delivery
+- 🔄 Hybrid connectivity and workload migration
+- 📊 Centralized monitoring and security visibility
+- 💾 Database backup and replication
+- 💰 Infrastructure sizing and cost estimation
 
-Key components:
+---
 
-- **Networking:** Hub VPC (NAT, ALB, AWS Network Firewall, Transit Gateway) peered to a Spoke VPC (App + RDS subnets) via Transit Gateway, per region.
-- **Edge:** Route 53, CloudFront, AWS WAF, and AWS Shield in front of the application.
-- **Compute:** Auto Scaling Group of web servers behind an internal NLB and public ALB.
-- **Data:** Amazon RDS for MySQL (Multi-AZ in the primary region, cross-region read replica in DR).
-- **Migration tooling:** AWS Application Migration Service (MGN) for web servers, AWS DMS for database migration/CDC.
-- **DR:** AWS Elastic Disaster Recovery (DRS), RDS cross-region read replica promotion, and Route 53 failover routing.
-- **Security & compliance:** GuardDuty, Security Hub, AWS Config, Macie, CloudTrail, Network Firewall.
-- **Operations:** CloudWatch dashboards/alarms, AWS Backup, SNS notifications.
+## 🏗️ Architecture Diagram
 
-## Architecture
+![AWS Architecture Diagram](./Actual%20Arch.jpeg)
 
-### Theoretical (Target) Architecture
+---
 
-The initial design proposed two full, symmetric hub-and-spoke stacks — one per region — each with its own Hub/Spoke VPC pair, Transit Gateway, Network Firewall, and Bastion, sitting behind a shared edge layer (Shield, WAF, Route 53) and a common set of management/security services (Config, GuardDuty, Macie, Backup, CloudTrail).
+## 🌎 High-Level Architecture
 
-![Theoretical Architecture](diagrams/theoretical-architecture.jpeg)
+### Primary Region — US East (N. Virginia)
 
-### Actual (Implemented) Architecture
+The primary workload is hosted in **US East (N. Virginia)** and is built around a VPC using multiple Availability Zones.
 
-The implemented design keeps the same hub-and-spoke pattern in the **primary region**, but the **DR region** was scoped down to a minimal footprint (a single public subnet with a compute instance and a private RDS instance) to control cost while still meeting the recovery objectives. The primary region's hub still connects to the DR region over the Transit Gateway/VPN, and the same edge and security/management stack fronts both.
+Key components include:
 
-![Actual Architecture](diagrams/actual-architecture.jpeg)
+- Application Load Balancer (ALB)
+- Network Load Balancer (NLB)
+- EC2 Auto Scaling environment
+- Amazon RDS for MySQL — Multi-AZ
+- NAT Gateway
+- AWS Network Firewall
+- Bastion Host
+- Transit Gateway connectivity
+- Amazon S3
+- AWS MGN replication infrastructure
+- AWS DMS
+- CloudWatch
+- CloudTrail
+- GuardDuty
+- Security Hub
+- AWS Config
+- Amazon Macie
+- AWS Backup
+- Lambda
+- EventBridge
+- SNS
+- AWS Certificate Manager
 
-The editable source diagram is included at [`diagrams/actual-architecture.drawio`](diagrams/actual-architecture.drawio) — open it with [draw.io / diagrams.net](https://app.diagrams.net/).
+### Disaster Recovery Region — Frankfurt
 
-## Migration Approach
+The Frankfurt environment provides a **regional DR capability** and contains:
 
-The migration was executed in five phases (full detail in [`docs/Project-Plan.pdf`](docs/Project-Plan.pdf)):
+- EC2-based DR instance
+- Amazon RDS for MySQL
+- Application Load Balancer
+- NAT Gateway
+- Bastion Host
+- CloudWatch
+- AWS Certificate Manager
 
-| # | Phase | Summary |
-|---|-------|---------|
-| 1 | On-Premises Discovery Before Migration | Run AWS Application Discovery Service, document server/DB inventory, network and firewall rules. |
-| 2 | AWS Infrastructure Setup (Hub & Spoke) | Build Hub/Spoke VPCs, ALB + WAF, Transit Gateway routing, AWS Network Firewall, Bastion, and the site-to-site VPN back to on-premises. |
-| 3 | Migration & DR Implementation | Install MGN/DMS agents, replicate and cut over web servers and databases, stand up the ASG/NLB in the spoke, and validate production. |
-| 4 | Security, Compliance & Operations | Enable DRS and RDS cross-region replication, build out the DR region, harden security (GuardDuty, Security Hub, Config, Macie), and configure AWS Backup. |
-| 5 | Monitoring, Alerting & Observability | Stand up CloudWatch dashboards, alarms, log groups, and SNS notifications end-to-end. |
+The architecture also includes database migration/replication capabilities between the primary and DR environments.
 
-## Cost Estimate
+---
 
-AWS Pricing Calculator estimate for the environment (see [`docs/GBG_SIZING.pdf`](docs/GBG_SIZING.pdf) / [`docs/GBG_SIZING.csv`](docs/GBG_SIZING.csv) for the full line-item breakdown):
+## 🔐 Security Architecture
 
-| Group | Monthly Cost |
-|---|---|
-| Frankfurt Pricing Group | $462.26 |
-| N. Virginia Pricing Group | $3,336.42 |
-| Global Services (Route 53, CloudFront, WAF) | $594.96 |
-| **Total** | **$4,393.64 / mo (~$52,723.68 / yr)** |
+Security is implemented using multiple layers rather than relying on a single control.
 
-## Repository Structure
+### Edge Security
 
+- **Amazon Route 53** for DNS
+- **Amazon CloudFront** for global content delivery
+- **AWS WAF** for web application protection
+- AWS security services integrated into the environment
+
+### Network Security
+
+- VPC isolation
+- Public and private subnet segmentation
+- Security Groups
+- Network Firewall
+- NAT Gateway for controlled outbound access
+- Transit Gateway for VPC connectivity
+- Site-to-Site VPN for hybrid connectivity
+
+### Security Monitoring & Compliance
+
+- **Amazon GuardDuty** — threat detection
+- **AWS Security Hub** — centralized security findings
+- **AWS CloudTrail** — API/activity auditing
+- **AWS Config** — configuration tracking and compliance checks
+- **Amazon Macie** — sensitive data discovery and protection
+- **Amazon CloudWatch** — metrics, logs, dashboards and alarms
+
+---
+
+## 🔄 Disaster Recovery & Migration
+
+The design supports both **disaster recovery** and **on-premises migration** scenarios.
+
+### AWS Application Migration Service (MGN)
+
+AWS MGN is used as part of the migration path from an on-premises environment into AWS.
+
+The sizing includes a dedicated replication server in the primary region.
+
+### AWS Database Migration Service (DMS)
+
+AWS DMS is included to support database migration between the primary and DR environments.
+
+The sizing includes a DMS replication instance in **US East (N. Virginia)** for migration toward **Frankfurt**.
+
+### AWS Backup
+
+AWS Backup is included for centralized backup management and long-term retention.
+
+The sizing model includes backup workloads with up to **180 days of warm retention**.
+
+---
+
+## 🌐 Networking Design
+
+The networking layer follows a segmented VPC architecture.
+
+### Primary VPC
+
+`10.0.0.0/16`
+
+The primary environment is divided into dedicated subnets for application, database, NAT, firewall, and bastion components across Availability Zones.
+
+### Spoke VPC
+
+`10.1.0.0/16`
+
+A separate spoke VPC is connected through the centralized Transit Gateway architecture.
+
+### DR VPC
+
+`10.0.0.0/16`
+
+The Frankfurt DR environment contains isolated public and private resources supporting the recovery workload.
+
+> **Note:** CIDR blocks shown above are taken from the architecture diagram. In a production implementation, overlapping CIDRs between independently connected VPCs would need to be avoided or addressed through an appropriate networking design.
+
+---
+
+## ⚙️ Application Traffic Flow
+
+A simplified external request path is:
+
+```text
+Users
+  │
+  ▼
+Route 53
+  │
+  ▼
+CloudFront
+  │
+  ▼
+AWS WAF
+  │
+  ▼
+Application Load Balancer
+  │
+  ▼
+Application / EC2 Auto Scaling
+  │
+  ▼
+Amazon RDS for MySQL
 ```
+
+Supporting network traffic is controlled through:
+
+```text
+VPC
+ ├── Public Subnets
+ │    ├── Load Balancers
+ │    └── Bastion Host
+ │
+ ├── Private Application Subnets
+ │    └── EC2 / Application Tier
+ │
+ ├── Private Database Subnets
+ │    └── Amazon RDS
+ │
+ ├── NAT Gateway
+ │
+ └── AWS Network Firewall
+```
+
+---
+
+## 📊 Infrastructure Sizing
+
+The architecture was sized using the **AWS Pricing Calculator**.
+
+The exported estimate is dated **July 21, 2026**.
+
+| Metric | Estimate |
+|---|---:|
+| Upfront Cost | **$0.00** |
+| Monthly AWS Cost | **$4,393.64** |
+| Estimated 12-Month Cost | **$52,723.68** |
+
+### Regional Cost Breakdown
+
+| Pricing Group | Monthly Estimate |
+|---|---:|
+| US East (N. Virginia) | **$3,336.42** |
+| Europe (Frankfurt) | **$462.26** |
+| Global Services | **$594.96** |
+| **Total** | **$4,393.64** |
+
+> AWS Pricing Calculator values are estimates. Actual AWS charges depend on real usage, configuration, data transfer, pricing changes, and applicable taxes.
+
+---
+
+## 🧰 AWS Services Used
+
+### Compute
+- Amazon EC2
+- EC2 Auto Scaling workload
+- AWS Lambda
+
+### Networking
+- Amazon VPC
+- Subnets
+- Route Tables
+- Internet Gateway
+- NAT Gateway
+- Transit Gateway
+- Site-to-Site VPN
+- Application Load Balancer
+- Network Load Balancer
+- AWS Network Firewall
+- Elastic Network Interfaces
+- Public IPv4
+
+### Database & Storage
+- Amazon RDS for MySQL
+- Amazon S3
+- AWS Backup
+
+### Edge & DNS
+- Amazon Route 53
+- Amazon CloudFront
+- AWS WAF
+- AWS Certificate Manager
+
+### Security
+- Amazon GuardDuty
+- AWS Security Hub
+- AWS Config
+- Amazon Macie
+- AWS CloudTrail
+
+### Monitoring & Operations
+- Amazon CloudWatch
+- Amazon EventBridge
+- Amazon SNS
+
+### Migration
+- AWS Application Migration Service (MGN)
+- AWS Database Migration Service (DMS)
+
+---
+
+## 🎯 Key Design Goals
+
+### 1. High Availability
+
+The primary workload uses multiple Availability Zones and a Multi-AZ database deployment to reduce the impact of infrastructure failures.
+
+### 2. Disaster Recovery
+
+A dedicated Frankfurt environment provides a second AWS region for regional recovery scenarios.
+
+### 3. Defense in Depth
+
+Security is distributed across the edge, network, workload, identity, logging, detection, and compliance layers.
+
+### 4. Controlled Network Access
+
+Private application and database resources are isolated from direct internet exposure, while NAT Gateway and Network Firewall provide controlled traffic paths.
+
+### 5. Centralized Visibility
+
+CloudWatch, CloudTrail, GuardDuty, Security Hub, and AWS Config provide operational and security visibility.
+
+### 6. Migration Readiness
+
+AWS MGN and AWS DMS provide mechanisms for migrating workloads and databases from on-premises environments and between AWS regions.
+
+---
+
+## 📁 Project Structure
+
+```text
 .
-├── README.md
-├── diagrams/
-│   ├── theoretical-architecture.jpeg
-│   ├── actual-architecture.jpeg
-│   └── actual-architecture.drawio
-└── docs/
-    ├── Project-Plan.pdf
-    ├── GBG_SIZING.pdf
-    └── GBG_SIZING.csv
+├── Actual Arch.jpeg
+├── GBG SIZING.pdf
+├── GBG SIZING.csv
+└── README.md
 ```
 
-> Adjust this tree to match how you actually organize the repo — e.g. if you add Terraform/CloudFormation code, note the `infra/` or `terraform/` folder here too.
+---
 
-## Getting Started
+## 💡 Skills Demonstrated
 
-1. Review the [Theoretical Architecture](#theoretical-target-architecture) and [Actual Architecture](#actual-implemented-architecture) diagrams to understand the network design.
-2. Follow the phase breakdown in [Migration Approach](#migration-approach) / `docs/Project-Plan.pdf` for the build order.
-3. Use `docs/GBG_SIZING.csv` as the basis for a cost review before provisioning.
-4. *(If this repo contains IaC)* add setup/deploy instructions here — prerequisites, `terraform init/plan/apply` or equivalent, and required variables/secrets.
+This project demonstrates practical experience with:
 
-## Status
+- AWS VPC architecture
+- Multi-AZ and multi-region design
+- AWS networking
+- Hybrid connectivity
+- Transit Gateway
+- Load balancing
+- Network security
+- Cloud security services
+- Infrastructure monitoring
+- Disaster recovery architecture
+- Database migration
+- Server migration
+- Backup strategy
+- AWS cost estimation
+- Enterprise cloud architecture documentation
 
-Infrastructure setup, migration, and DR phases are documented and tracked in the project plan; update this section with current progress (e.g. "Phases 1–3 complete, Phase 4 in progress").
+---
 
-## License
+## ⚠️ Architecture Notes
 
-Add your license here (e.g. MIT, Apache-2.0), or mark as proprietary/internal if this is not meant to be open source.
+This repository represents an **architecture/design project and sizing exercise** based on the provided architecture diagram and AWS Pricing Calculator estimate.
+
+The AWS Pricing Calculator estimate should not be interpreted as an actual AWS bill, and the architecture diagram should be validated against the final production requirements before implementation.
+
+---
+
+## 👨‍💻 Author
+
+**Mohamed Aboelmagd**
+
+Cloud / AWS Infrastructure & Security Enthusiast
+
+---
+
+## ⭐ Project Highlights
+
+**Multi-Region | High Availability | Disaster Recovery | Network Security | Cloud Security | Hybrid Connectivity | Migration | Monitoring | Cost Optimization**
